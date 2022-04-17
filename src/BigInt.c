@@ -625,7 +625,7 @@ BigInt* notBigInt(BigInt* a,bool consumeA){
 	if(a){
 		if(a->size>0){
 			bool searchNZ=true;
-			uint64_t buffer=a->data[0]+1;
+			uint64_t buffer=a->data[0]+(a->sgn==0?1:-1);
 			a->data[0]=buffer&UINT32_MAX;
 			searchNZ=(a->data[0]==0);
 			buffer >>= INT_BITS;
