@@ -863,7 +863,7 @@ int main(void) {
 			if(tree){
 				fputs("Expression Tree: ",stdout);
 				printTree(tree);
-				putchar('\n');
+				fputs("\nResult: ",stdout);
 				fflush(stdout);
 				BigInt* tmp=evaluateTree(tree);
 				if(tmp){
