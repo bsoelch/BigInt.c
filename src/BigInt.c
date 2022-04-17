@@ -2,7 +2,7 @@
  * BigInt.c
  *
  *  Created on: 28.09.2021
- *      Author: bsoelch
+ *  Author: bsoelch
  */
 #include <stdlib.h>
 #include <stdio.h>

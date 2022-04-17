@@ -1,5 +1,6 @@
 /*
  * Calculator.c
+ *
  * Author: bsoelch
  */
 

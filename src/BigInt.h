@@ -2,7 +2,7 @@
  * BigInt.h
  *
  *  Created on: 28.09.2021
- *      Author: bsoelch
+ *  Author: bsoelch
  */
 
 #ifndef BIGINT_H_
