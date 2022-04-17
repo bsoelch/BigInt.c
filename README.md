@@ -6,7 +6,7 @@ implementation of arbitrary size Integers
 The file Calculator.c contains a simple console calculator
  based on this big-integer libary.
 
-The program evaluates arithmetic expressions consisting of bracets ( `(` `)` ) numbers (decimal) and operators (explained below). 
+The program evaluates arithmetic expressions consisting of brackets ( `(` `)` ) numbers (decimal) and operators (explained below). 
 The program prints the expression tree (with numbers in hexadecimal representation) and the result of the expression (in decimal).
 as well as the syntax tree of the evaluated expression.
 
