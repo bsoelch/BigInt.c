@@ -27,10 +27,10 @@ static const int BIGINT_MAX_BASE = 62;
 typedef struct BigIntStruct{
 	//sgn data (0 if this number is >=0, UINT32_MAX if number is <0)
 	uint32_t sgn;
-	//XXX allow capacity>size
+	//addLater allow capacity>size
 	size_t size;
 	//unsigned bit-data of this number (in little endian notation)
-	uint32_t* data;//XXX? handle BigEndian encodings
+	uint32_t* data;//addLater? handle BigEndian encodings
 }BigInt;
 
 static BigInt BIG_VAL_ZERO;
@@ -101,20 +101,20 @@ static uint32_t internal_digitFromChar(char c,bool bigBase){
 	}
 }
 /*creates a BigInt from a null-terminated string
- *base should be between 2 and 62*///XXX describe case handling
+ *base should be between 2 and 62*///addLater describe case handling
 BigInt* createBigIntCStr(const char* str,int base){
 	return createBigIntStr(str,strlen(str),base);
 }
 /*creates a BigInt from a string
- *base should be between 2 and 62*///XXX describe case handling
+ *base should be between 2 and 62*///addLater describe case handling
 BigInt* createBigIntStr(const char* stringValue,size_t stringLen,int base){
 	if(base<2||base>BIGINT_MAX_BASE){
 		return NULL;
 	}
-	BigInt* ret=createBigIntInt(0);//XXX shortcut-method for pow2 bases
+	BigInt* ret=createBigIntInt(0);//addLater shortcut-method for pow2 bases
 	BigInt* bigIntBase=createBigIntInt(base);
 	bool bigBase=base>36;
-	for(size_t i=0;i<stringLen;i++){//XXX? more efficient algorithm
+	for(size_t i=0;i<stringLen;i++){//addLater? more efficient algorithm
 		ret=multBigInt(ret,true,bigIntBase,false);
 		if(!ret){
 			break;
@@ -432,7 +432,7 @@ static void internal_printInt64(BigInt *toPrint, int base,uint64_t width, FILE *
 int printBigInt(BigInt *toPrint, _Bool consume, FILE *target, int base) {
 	if (toPrint) {
 		if (base < 2 || base > BIGINT_MAX_BASE) {
-			return -1; //XXX error codes
+			return -1; //addLater error codes
 		} //no else
 		if (toPrint->size == 0) {
 			fputs("0", target);
@@ -696,7 +696,7 @@ static void internal_unsavelogicalOp(BigInt* target,BigInt* big,BigInt* small,
 			memset(i+(target->data),UINT32_MAX,(big->size - small->size)*sizeof(uint32_t));
 			target->size=big->size;
 		}
-	}else{//XXX shortcut
+	}else{//addLater shortcut
 		for(;i<big->size;i++){
 		   target->data[i]=f(internal_2compBlock(big,i,&hadNZB),defVal);
 		}
@@ -1222,7 +1222,7 @@ static BigInt* internal_karatsubaMult(BigInt* big,BigInt* small){
 							freeBigInt(high);
 							high=NULL;
 							res->data[res->size-1]=0;//overflow block
-							//XXX addWithOffset?
+							//addLater addWithOffset?
 							uint64_t buffer=0;
 							size_t i=0;
 							for(;i<mid->size;i++){
@@ -1272,7 +1272,7 @@ static BigInt* internal_karatsubaMult(BigInt* big,BigInt* small){
 					freeBigInt(low);
 					low=NULL;
 					res->data[res->size-1]=0;//overflow block
-					//XXX addWithOffset?
+					//addLater addWithOffset?
 					uint64_t buffer=0;
 					size_t i=0;
 					for(;i<high->size;i++){
@@ -1316,7 +1316,7 @@ BigInt* multBigInt(BigInt* a,bool consumeA,BigInt* b,bool consumeB){
 		if(a==b){//can only consume one
 			consumeA&=consumeB;//only consume if both can be consumed
 			consumeB=false;
-			//XXX call squareBigInt here
+			//addLater call squareBigInt here
 		}
 		if(a->size==0){//one of the factors is 0
 			if(consumeB){
@@ -1421,7 +1421,7 @@ static BigInt* internal_divideNewton(BigInt* a,BigInt* b){
 	uint32_t sgnBuff;
 	while(1){
 		del=multBigInt(b,false,res,false);//D*X_i
-		//XXX? more effective creation method for 2^(32k)
+		//addLater? more effective creation method for 2^(32k)
 		del = subtBigInt(shiftBigInt(createBigIntInt(1), true, (INT_BITS * k) + 4),
 				true, del, true);		//2^32k-D*X_i
 		del=multBigInt(res,false,del,true);//X_i*(2^(32k)-D*X_i)
@@ -1522,7 +1522,7 @@ DivModResult divModBigInt(BigInt* a,bool consumeA,BigInt* b,bool consumeB,bool s
 					q=cloneBigInt(a);
 				}
 				a=internal_divideNewton(a,b);
-				//TODO correct error +-1
+				//FIXME correct error +-1
 				if(storeRem){
 					BigInt* tmp=a;
 					a=subtBigInt(q,true,multBigInt(a,false,b,consumeB),true);
