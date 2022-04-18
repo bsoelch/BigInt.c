@@ -477,23 +477,20 @@ int printBigInt(BigInt *toPrint, _Bool consume, FILE *target, int base) {
 			}
 		}
 
-		BigInt **divMod;
+		DivModResult divMod;
 		bool first=true;
 		while (toPrint) {
 			while (toPrint->size > 2) {
 				assert(powX>=0);
 				divMod = divModBigInt(toPrint, consume, pows[powX--], false, true,true);
 				consume=true;
-				if (divMod && divMod[0] && divMod[1]) {
-					toPrint = divMod[0];
-					stack[stackSize++] = divMod[1];
-					free(divMod);
+				if (divMod.result && divMod.remainder) {
+					toPrint = divMod.result;
+					stack[stackSize++] = divMod.remainder;
 				} else {
-					if(divMod){
-						freeBigInt(divMod[0]);
-						freeBigInt(divMod[1]);
-						free(divMod);
-					}
+					//division failed
+					freeBigInt(divMod.result);
+					freeBigInt(divMod.remainder);
 					while (powCount > 0) {
 						freeBigInt(pows[--powCount]);
 					}
@@ -1449,7 +1446,7 @@ static BigInt* internal_divideNewton(BigInt* a,BigInt* b){
 
 /**divides a by b
   arguments marked with consume will be deleted or overwritten by the calculation*/
-BigInt** divModBigInt(BigInt* a,bool consumeA,BigInt* b,bool consumeB,bool storeDiv,bool storeRem){
+DivModResult divModBigInt(BigInt* a,bool consumeA,BigInt* b,bool consumeB,bool storeDiv,bool storeRem){
 	if(a&&b&&(storeDiv||storeRem)){
 		if(a==b){//can only consume one
 			consumeA&=consumeB;//only consume if both can be consumed
@@ -1458,13 +1455,14 @@ BigInt** divModBigInt(BigInt* a,bool consumeA,BigInt* b,bool consumeB,bool store
 		int sgnA = bigIntSgn(a);
 		int sgnB = bigIntSgn(b);
 		if(sgnB==0){
+			//division by 0
 			if(consumeA){
 				freeBigInt(a);
 			}
 			if(consumeB){
 				freeBigInt(b);
 			}
-			return NULL;
+			return (DivModResult){.result=NULL,.remainder=NULL};
 		}//no else
 		if (sgnA<0) {
 			a=negateBigInt(a,consumeA);
@@ -1474,17 +1472,19 @@ BigInt** divModBigInt(BigInt* a,bool consumeA,BigInt* b,bool consumeB,bool store
 		if(a){
 			consumeA=true;//a is copy
 		}else{
+			//cloning a failed
 			if(consumeB){
 				freeBigInt(b);
 			}
-			return NULL;
+			return (DivModResult){.result=NULL,.remainder=NULL};
 		}//no else
 		if (sgnB<0) {
 			b=negateBigInt(b,consumeB);
 			consumeB=true;
 			if(b==NULL){
+				//negating b failed
 				freeBigInt(a);
-				return NULL;
+				return (DivModResult){.result=NULL,.remainder=NULL};
 			}
 		}
 		BigInt* q=NULL;
@@ -1537,12 +1537,12 @@ BigInt** divModBigInt(BigInt* a,bool consumeA,BigInt* b,bool consumeB,bool store
 				if(storeDiv){
 					q=createBigIntSize(delta+2);
 					if(q==NULL||q->data==NULL){
-						//cleanup
+						//creating q failed
 						freeBigInt(a);
 						if(consumeB){
 							freeBigInt(b);
 						}
-						return NULL;
+						return (DivModResult){.result=NULL,.remainder=NULL};
 					}else{
 						//initialize bits of return value to 0
 						memset(q->data,0,(delta+2)*sizeof(uint32_t));
@@ -1639,9 +1639,10 @@ BigInt** divModBigInt(BigInt* a,bool consumeA,BigInt* b,bool consumeB,bool store
 						if(tmp){
 							a->data=tmp;
 						}else{
+							//reallocation of a failed
 							freeBigInt(a);
 							freeBigInt(q);
-							return NULL;
+							return (DivModResult){.result=NULL,.remainder=NULL};
 						}
 					}
 					q=internal_standardizeBigInt(q);
@@ -1656,73 +1657,51 @@ BigInt** divModBigInt(BigInt* a,bool consumeA,BigInt* b,bool consumeB,bool store
 			freeBigInt(b);
 			b=NULL;
 		}
-
-		BigInt** ret=malloc(((storeDiv&&storeRem)?2:1)*sizeof(BigInt*));
-		if(ret){
-			//sign handling of result a=q*b+r
-			// (q*b+r)/b => q R B
-			// (q*b+r)/-b => -q R r
-			// (-(q*b+r))/b => -q R -r
-			// (-(q*b+r))/-b => q R -r
-			if(sgnA<0){//sgnA->sgnR, sgnB->sgnQ
-				if(sgnB<0){
-					sgnB=1;
-				}else{
-					sgnB=-1;
-				}
-			}
-			if(storeDiv){
-				if(storeRem){
-					ret[0]=sgnB<0?negateBigInt(q,true):q;
-					ret[1]=sgnA<0?negateBigInt(a,true):a;
-				}else{
-					ret[0]=sgnB<0?negateBigInt(q,true):q;
-					freeBigInt(a);
-				}
+		DivModResult ret={.result=NULL,.remainder=NULL};
+		//sign handling of result a=q*b+r
+		// (q*b+r)/b => q R B
+		// (q*b+r)/-b => -q R r
+		// (-(q*b+r))/b => -q R -r
+		// (-(q*b+r))/-b => q R -r
+		if(sgnA<0){//sgnA->sgnR, sgnB->sgnQ
+			if(sgnB<0){
+				sgnB=1;
 			}else{
-				ret[0]=sgnA<0?negateBigInt(a,true):a;
-				freeBigInt(q);
+				sgnB=-1;
 			}
-			return ret;
-		}else{
-			//both are consumable or copies
-			freeBigInt(a);
-			//res is NULL if it was not set
-			freeBigInt(q);
-			return NULL;
 		}
+		if(storeDiv){
+			if(storeRem){
+				ret.result=sgnB<0?negateBigInt(q,true):q;
+				ret.remainder=sgnA<0?negateBigInt(a,true):a;
+			}else{
+				ret.result=sgnB<0?negateBigInt(q,true):q;
+				freeBigInt(a);
+			}
+		}else{
+			ret.remainder=sgnA<0?negateBigInt(a,true):a;
+			freeBigInt(q);
+		}
+		return ret;
 	}
+	//invalid input arguments
 	if(consumeA){
 		freeBigInt(a);
 	}
 	if(consumeB){
 		freeBigInt(b);
 	}
-	return NULL;
+	return (DivModResult){.result=NULL,.remainder=NULL};
 }
 /**divides a by b
   arguments marked with consume will be deleted or overwritten by the calculation*/
 BigInt* divBigInt(BigInt* a,bool consumeA,BigInt* b,bool consumeB){
-	BigInt** res=divModBigInt(a,consumeA,b,consumeB,true,false);
-	if(res){
-		BigInt* tmp=res[0];
-		free(res);
-		return tmp;
-	}else{
-		return NULL;
-	}
+	return divModBigInt(a,consumeA,b,consumeB,true,false).result;
 }
 /**remainder of a divided by b
   arguments marked with consume will be deleted or overwritten by the calculation*/
 BigInt* modBigInt(BigInt* a,bool consumeA,BigInt* b,bool consumeB){
-	BigInt** res=divModBigInt(a,consumeA,b,consumeB,false,true);
-	if(res){
-		BigInt* tmp=res[0];
-		free(res);
-		return tmp;
-	}else{
-		return NULL;
-	}
+	return divModBigInt(a,consumeA,b,consumeB,false,true).remainder;
 }
 
 BigInt* bigIntGCD(BigInt* a,bool consumeA,BigInt* b,bool consumeB){

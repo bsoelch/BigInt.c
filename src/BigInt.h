@@ -14,6 +14,10 @@
 
 
 typedef struct BigIntStruct BigInt;
+typedef struct {
+	BigInt* result;
+	BigInt* remainder;
+}DivModResult;
 
 //constants for zero and one
 //!!! do not mark this values as consumable!!!
@@ -89,7 +93,7 @@ BigInt* multBigInt(BigInt* a,bool consumeA,BigInt* b,bool consumeB);
 BigInt* squareBigInt(BigInt* a,bool consume);
 /**result and remainder of a divided by b
   arguments marked with consume will be deleted or overwritten by the calculation*/
-BigInt** divModBigInt(BigInt* a,bool consumeA,BigInt* b,bool consumeB,bool storeDiv,bool storeRem);
+DivModResult divModBigInt(BigInt* a,bool consumeA,BigInt* b,bool consumeB,bool storeDiv,bool storeRem);
 
 //helper for the parts of divMod
 /**divides a by b
